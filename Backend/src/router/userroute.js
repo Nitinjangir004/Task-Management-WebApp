@@ -1,8 +1,9 @@
 import express from "express";
 const router = express().router;
-import { sigin } from "../controllers/authentication.js";
+import { signup,login } from "../controllers/authentication.js";
 
-router.post("/signup",sigin);
+router.post("/signup",signup);
+router.post("/login",login);
 router.get("/user", function(req,res){
     res.json({
         messsage:"hello"
