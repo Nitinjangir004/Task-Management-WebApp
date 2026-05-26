@@ -10,7 +10,7 @@ import mongodb from "./db.js";
 const port = process.env.PORT;
 
 
-app.use("/api/v1" , router);
+app.use("/v1/account" , router);
 
 
 app.listen(port,()=>{

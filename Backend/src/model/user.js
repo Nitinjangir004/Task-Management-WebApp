@@ -21,6 +21,16 @@ const userschema = new mongoose.Schema({
     refreshToken: {        // store refresh token for invalidation
         type: String,
         default: null
+    },
+    isVerified: { 
+        type: Boolean, 
+        default: false 
+    },
+    otp: { 
+        type: String 
+    },
+    otpExpires: { 
+        type: Date 
     }
 }, { timestamps: true })   // adds createdAt, updatedAt automatically
 const User = mongoose.model("User" , userschema);
