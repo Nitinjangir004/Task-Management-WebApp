@@ -2,6 +2,7 @@ import bcrypt from "bcrypt";
 import User from "../model/user.js";
 import jsonwebtoken from "jsonwebtoken";
 import nodemailer from "nodemailer"
+import { transporter } from "../../utils/mailer.js";
 import { config } from "dotenv";
 config();
 const Accesssecretkey=process.env.ACCESS_SECRET_KEY;
@@ -62,15 +63,7 @@ export  const signup = async(req,res)=>{
 
             // node mailer code , to send otp on the provided email
             // Create a transporter using SMTP
-            const transporter = nodemailer.createTransport({
-            host: "smtp.gmail.com",
-            port: 465,
-            secure: true, // use STARTTLS (upgrade connection to TLS after connecting)
-            auth: {
-                user: process.env.SMTP_USER,
-                pass: process.env.SMTP_PASS,
-            },
-            });
+            
             //to verify connection 
             try {
                 await transporter.verify();
@@ -93,10 +86,9 @@ export  const signup = async(req,res)=>{
                                
             })
             // send otp via node mailer 
-
             try {
                 const info = await transporter.sendMail({
-                    from: '"Task App Team" <nitinjangir004@gmail.com>', // sender address
+                    from: `"Task App Team" <${process.env.SMTP_USER}>`, // sender address
                     to: email, // The user's email
                     subject: "Verify Your Email Address - Task App", // Clean, clear subject line
                     
@@ -109,11 +101,14 @@ export  const signup = async(req,res)=>{
 
                 console.log("Verification email sent successfully: %s", info.messageId);
 
-                } catch (err) {
-                console.error("Error while sending mail:", err);
+                } catch (error) {
+                    return res.status(500).json({
+                        sucess:false,
+                        message:"Somthing Went worng with nodemailer",error: error.message
+                    })
                 }
             return res.status(200).json({
-                sucess:200,
+                sucess:true,
                 message:"OTP Send On the Email"
             })
         }
@@ -177,7 +172,7 @@ export const login = async (req,res)=>{
     try {
         const {email,password} = req.body;
         if(!email||!password){
-            return res.status(500).json({
+            return res.status(400).json({
                  message: "email & password is not found , Please try again "
             })
         }
@@ -226,7 +221,7 @@ export const login = async (req,res)=>{
         }
     } 
     catch (error) {
-         res.status(500).json({ message: "Something went wrong during login", error: error.message });
+        res.status(500).json({ message: "Something went wrong during login", error: error.message });
     }
 }
 
@@ -284,5 +279,55 @@ export const refresh = async (req,res)=>{
             message: "Something went wrong during token generation", 
             error: error.message 
         });
+    };
+}
+
+export const resendotp = async(req,res)=>{
+    try {
+        const {email} = req.body;
+        const user = await User.findOne({email});
+        if(!user){
+            return res.status(400).json({
+                sucess:false,
+                message:"User not Found"
+            })
+        }
+        if (user.isVerified) {
+            return res.status(400).json({ message: "Account is already verified" });
+        }
+        // generate Otp via Math.floor
+        const generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
+        // 2. Set expiration (e.g., 10 minutes from now)
+        const otpExpiryTime = new Date(Date.now() + 10 * 60 * 1000);
+        try {
+            const info = await transporter.sendMail({
+                from: `"Task App Team" <${process.env.SMTP_USER}>`, // sender address
+                to: email, // The user's email
+                subject: "Verify Your Email Address - Task App", // Clean, clear subject line
+                
+                // Fallback for ancient email clients or strict firewalls
+                text: `Hello, your email verification code is: ${generatedOtp}. This code expires in 10 minutes.`, 
+                
+                // The beautiful HTML template we just created
+                html: generateOtpEmailTemplate(generatedOtp), 
+            });
+            console.log("Verification email sent successfully: %s", info.messageId);
+            } 
+        catch (error) {
+            return res.status(500).json({
+                sucess:false,
+                message:"Somthing Went worng with nodemailer",error: error.message
+            })
+        }
+        user.otp= generatedOtp;
+        user.otpExpires= otpExpiryTime;
+        await user.save({validateBeforeSave:false});
+        return res.status(200).json({
+            sucess:true,
+            message:"OTP Send On the Email"
+        })
+
+    } catch (error) {
+       res.status(500).json({ message: "Something went wrong during resendotp", error: error.message }); 
     }
 }
