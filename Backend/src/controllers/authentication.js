@@ -3,25 +3,24 @@ import User from "../model/user.js";
 import jsonwebtoken from "jsonwebtoken";
 import nodemailer from "nodemailer"
 import { transporter } from "../../utils/mailer.js";
-import { config } from "dotenv";
-config();
 const Accesssecretkey=process.env.ACCESS_SECRET_KEY;
 const Refreshsecretkey=process.env.REFRESH_SECRET_KEY;
-
+const ResetTokenkey=process.env.RESET_SECRET_KEY;
 // otp template 
 
 // A reusable function to generate the HTML email
-export const generateOtpEmailTemplate = (otp) => {
+export const generateOtpEmailTemplate = (otp,signup) => {
   return `
     <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eaeaec; border-radius: 10px; background-color: #ffffff;">
       
       <div style="text-align: center; padding-bottom: 20px; border-bottom: 2px solid #f0f0f5;">
-        <h2 style="color: #1a1a1a; margin: 0; font-size: 24px;">Task Management App</h2>
+        <h2 style="color: #1a1a1a; margin: 0; font-size: 24px;">Flowship</h2>
       </div>
       
       <div style="padding: 30px 0; color: #4a4a4a; line-height: 1.6; font-size: 16px;">
         <p style="margin-top: 0;">Hello,</p>
-        <p>Thank you for signing up! To complete your registration and secure your account, please use the following One-Time Password (OTP) to verify your email address.</p>
+        ${signup ? `<p>Thank you for signing up! To complete your registration and secure your account, please use the following One-Time Password (OTP) to verify your email address.</p>
+        ` : `<p>We received a request to reset your password. Please use the following One-Time Password (OTP) to securely authorize this change.</p>`}
         
         <div style="text-align: center; margin: 35px 0;">
           <span style="display: inline-block; font-size: 32px; font-weight: bold; letter-spacing: 8px; color: #4F46E5; background-color: #EEF2FF; padding: 15px 30px; border-radius: 8px; border: 1px solid #C7D2FE;">
@@ -96,7 +95,7 @@ export  const signup = async(req,res)=>{
                     text: `Hello, your email verification code is: ${generatedOtp}. This code expires in 10 minutes.`, 
                     
                     // The beautiful HTML template we just created
-                    html: generateOtpEmailTemplate(generatedOtp), 
+                    html: generateOtpEmailTemplate(generatedOtp,true), 
                 });
 
                 console.log("Verification email sent successfully: %s", info.messageId);
@@ -196,7 +195,7 @@ export const login = async (req,res)=>{
             });
         }
             const AccessToken = jsonwebtoken.sign({
-                id:userexist._id,
+                id:userexist._id.toString(),
                 email:email
             },Accesssecretkey,{expiresIn:"15m"});
 
@@ -309,7 +308,7 @@ export const resendotp = async(req,res)=>{
                 text: `Hello, your email verification code is: ${generatedOtp}. This code expires in 10 minutes.`, 
                 
                 // The beautiful HTML template we just created
-                html: generateOtpEmailTemplate(generatedOtp), 
+                html: generateOtpEmailTemplate(generatedOtp,true), 
             });
             console.log("Verification email sent successfully: %s", info.messageId);
             } 
@@ -330,4 +329,124 @@ export const resendotp = async(req,res)=>{
     } catch (error) {
        res.status(500).json({ message: "Something went wrong during resendotp", error: error.message }); 
     }
+}
+//forgetpassword
+export const forgetPassword = async(req,res)=>{
+    try {
+        const {email} = req.body;
+        if(!email){
+            return res.status(400).json({
+                success:false,
+                message:"Email not found"
+            })
+        }
+        const user = await User.findOne({email});
+        if(!user){
+            return res.status(400).json({
+                success:false,
+                message:"Email not found"
+            })
+        }
+        // generate Otp via Math.floor
+        const generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
+        // 2. Set expiration (e.g., 10 minutes from now)
+        const otpExpiryTime = new Date(Date.now() + 10 * 60 * 1000);
+        try {
+            const info = await transporter.sendMail({
+                from: `"Task App Team" <${process.env.SMTP_USER}>`,
+                to: email,
+                subject: "Reset Password OTP - Task App",
+                text: `Hello, your reset password verification code is: ${generatedOtp}. This code expires in 10 minutes.`, 
+                html: generateOtpEmailTemplate(generatedOtp,false), 
+            });
+            console.log("Verification email sent successfully: %s", info.messageId);
+        } 
+        catch (error) {
+            return res.status(500).json({
+                sucess:false,
+                message:"Somthing Went worng with nodemailer",error: error.message
+            })
+        }
+        user.passwordresetotp = generatedOtp;
+        user.passwordresetotpExpire = otpExpiryTime;
+        user.save({validateBeforeSave:false});
+
+    } catch (error) {
+      return res.status(500).json({ message: "Something went wrong during forgetpassword", error: error.message });   
+    }
+}
+// /verify-reset-otp
+export const VerifyResetOtp = async (req,res)=>{
+    try {
+        const {email ,otp} = req.body;
+        if(!email || !otp || otp.length !== 6){
+            return res.status(400).json({
+                message:"otp not found or email is invalid"
+            })
+        }
+        const newUser =await User.findOne({email})
+        if (!newUser) {
+            return res.status(404).json({ message: "User not found" });
+        }
+        if(newUser.passwordresetotp !== otp || newUser.passwordresetotpExpire < Date.now() ){
+            return res.status(400).json({ message: "Invalid or expired OTP and try to again forgetpassword" });
+        }
+        
+        const resettoken = jsonwebtoken.sign({
+            id=newUser._id.toString(),
+            email=newUser.email
+        },ResetTokenkey,{expiresIn:"15m"});
+        newUser.passwordresetotp = undefined;
+        newUser.passwordresetotpExpire =undefined;
+        newUser.resettoken = resettoken;
+        newUser.save({validateBeforeSave:false});
+        return res.status(200).json({
+            success:true,
+            resettoken =resettoken,
+            message:"this is resettoken vaild for 15 min"
+        })
+    } catch (error) {
+        return res.status(500).json({ message: "Something went wrong during VerifyResetOtp", error: error.message });
+    }
+}
+//reset-password
+export const resetpassword = async(req,res)=>{
+    try {
+        const {email ,resettoken,password} = req.body;
+        if(!email||!resettoken||!password){
+            return res.status(400).json({
+                    message: "email & password is not found , Please try again "
+            })
+        }
+        const userexist = await User.findOne({email});
+        if(!userexist){
+            return res.status(400).json({
+                message: "Email is not Found , Signup First"
+            })
+        }
+        const verify =await jsonwebtoken.verify(resettoken,ResetTokenkey);
+        if(!verify){
+            return res.status(401).json({
+                message:"token is invalid"
+            })
+        }
+        const hashpassword =await bcrypt.hash(password,10);
+        userexist.password =hashpassword;
+        userexist.resettoken= undefined;
+        userexist.refreshToken= undefined;
+        userexist.save({validateBeforeSave:false});
+        return res.status(200).json({
+            success:true,
+            message:"Password has change ,please login"
+        })
+
+    } catch (error) {
+      return res.status(500).json({ message: "Something went wrong during reset-password", error: error.message });  
+    }
+}
+
+// logout 
+
+export const logout = async(req,res)=>{
+    res.clearCookie("refreshToken");
 }
