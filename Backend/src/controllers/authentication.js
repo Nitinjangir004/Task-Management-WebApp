@@ -87,9 +87,9 @@ export  const signup = async(req,res)=>{
             // send otp via node mailer 
             try {
                 const info = await transporter.sendMail({
-                    from: `"Task App Team" <${process.env.SMTP_USER}>`, // sender address
+                    from: `"Flowship Team" <${process.env.SMTP_USER}>`, // sender address
                     to: email, // The user's email
-                    subject: "Verify Your Email Address - Task App", // Clean, clear subject line
+                    subject: "Verify Your Email Address - Flowship", // Clean, clear subject line
                     
                     // Fallback for ancient email clients or strict firewalls
                     text: `Hello, your email verification code is: ${generatedOtp}. This code expires in 10 minutes.`, 
@@ -102,12 +102,12 @@ export  const signup = async(req,res)=>{
 
                 } catch (error) {
                     return res.status(500).json({
-                        sucess:false,
+                        success:false,
                         message:"Somthing Went worng with nodemailer",error: error.message
                     })
                 }
             return res.status(200).json({
-                sucess:true,
+                success:true,
                 message:"OTP Send On the Email"
             })
         }
@@ -148,6 +148,13 @@ export const verifyotp = async(req,res)=>{
 
         newUser.refreshToken = RefreshToken;
         await newUser.save({ validateBeforeSave: false });
+
+        res.cookie("accessToken", AccessToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: "strict",
+            maxAge: 15 * 60 * 1000  // 15 minutes
+        })
         
         res.cookie("refreshToken", RefreshToken, {
             httpOnly: true,
@@ -156,8 +163,7 @@ export const verifyotp = async(req,res)=>{
             maxAge: 7 * 24 * 60 * 60 * 1000,
         })
         return res.status(201).json({
-            sucess:200,
-            AccessToken : AccessToken,
+            success:200,
             message:"Sign-in completed"
         })
     }
@@ -207,6 +213,12 @@ export const login = async (req,res)=>{
             userexist.refreshToken = RefreshToken;
             await userexist.save({ validateBeforeSave: false });
 
+            res.cookie("accessToken", AccessToken, {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === "production",
+                sameSite: "strict",
+                maxAge: 15 * 60 * 1000  // 15 minutes
+            })
             res.cookie("refreshToken", RefreshToken, {
                 httpOnly: true,
                 secure: process.env.NODE_ENV === "production",
@@ -214,7 +226,6 @@ export const login = async (req,res)=>{
                 maxAge: 7 * 24 * 60 * 60 * 1000
             })
             return res.status(200).json({
-                AccessToken:AccessToken,
                 message:"Login completed"
             })
         }
@@ -261,6 +272,13 @@ export const refresh = async (req,res)=>{
     userexist.refreshToken = RefreshToken;
     await userexist.save({ validateBeforeSave: false });
 
+    res.cookie("accessToken", AccessToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "strict",
+        maxAge: 15 * 60 * 1000  // 15 minutes
+    })
+
     res.cookie("refreshToken", RefreshToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
@@ -268,7 +286,6 @@ export const refresh = async (req,res)=>{
         maxAge: 7 * 24 * 60 * 60 * 1000
     })
     return res.status(200).json({
-        AccessToken:AccessToken,
         message:"New Access and Refresh Token"
     })
 
@@ -287,7 +304,7 @@ export const resendotp = async(req,res)=>{
         const user = await User.findOne({email});
         if(!user){
             return res.status(400).json({
-                sucess:false,
+                success:false,
                 message:"User not Found"
             })
         }
@@ -300,9 +317,9 @@ export const resendotp = async(req,res)=>{
         const otpExpiryTime = new Date(Date.now() + 10 * 60 * 1000);
         try {
             const info = await transporter.sendMail({
-                from: `"Task App Team" <${process.env.SMTP_USER}>`, // sender address
+                from: `"Flowship Team" <${process.env.SMTP_USER}>`, // sender address
                 to: email, // The user's email
-                subject: "Verify Your Email Address - Task App", // Clean, clear subject line
+                subject: "Verify Your Email Address - Flowship", // Clean, clear subject line
                 
                 // Fallback for ancient email clients or strict firewalls
                 text: `Hello, your email verification code is: ${generatedOtp}. This code expires in 10 minutes.`, 
@@ -314,7 +331,7 @@ export const resendotp = async(req,res)=>{
             } 
         catch (error) {
             return res.status(500).json({
-                sucess:false,
+                success:false,
                 message:"Somthing Went worng with nodemailer",error: error.message
             })
         }
@@ -322,7 +339,7 @@ export const resendotp = async(req,res)=>{
         user.otpExpires= otpExpiryTime;
         await user.save({validateBeforeSave:false});
         return res.status(200).json({
-            sucess:true,
+            success:true,
             message:"OTP Send On the Email"
         })
 
@@ -353,9 +370,9 @@ export const forgetPassword = async(req,res)=>{
         const otpExpiryTime = new Date(Date.now() + 10 * 60 * 1000);
         try {
             const info = await transporter.sendMail({
-                from: `"Task App Team" <${process.env.SMTP_USER}>`,
+                from: `"Flowship Team" <${process.env.SMTP_USER}>`,
                 to: email,
-                subject: "Reset Password OTP - Task App",
+                subject: "Reset Password OTP - Flowship",
                 text: `Hello, your reset password verification code is: ${generatedOtp}. This code expires in 10 minutes.`, 
                 html: generateOtpEmailTemplate(generatedOtp,false), 
             });
@@ -363,13 +380,18 @@ export const forgetPassword = async(req,res)=>{
         } 
         catch (error) {
             return res.status(500).json({
-                sucess:false,
+                success:false,
                 message:"Somthing Went worng with nodemailer",error: error.message
             })
         }
+        //check again
         user.passwordresetotp = generatedOtp;
         user.passwordresetotpExpire = otpExpiryTime;
-        user.save({validateBeforeSave:false});
+        await user.save({validateBeforeSave:false});
+        return res.status(200).json({
+            success: true,
+            message: "OTP sent to your email"
+        })
 
     } catch (error) {
       return res.status(500).json({ message: "Something went wrong during forgetpassword", error: error.message });   
@@ -393,16 +415,16 @@ export const VerifyResetOtp = async (req,res)=>{
         }
         
         const resettoken = jsonwebtoken.sign({
-            id=newUser._id.toString(),
-            email=newUser.email
+            id:newUser._id.toString(),
+            email:newUser.email
         },ResetTokenkey,{expiresIn:"15m"});
         newUser.passwordresetotp = undefined;
         newUser.passwordresetotpExpire =undefined;
         newUser.resettoken = resettoken;
-        newUser.save({validateBeforeSave:false});
+        await newUser.save({validateBeforeSave:false});
         return res.status(200).json({
             success:true,
-            resettoken =resettoken,
+            resettoken :resettoken,
             message:"this is resettoken vaild for 15 min"
         })
     } catch (error) {
@@ -424,17 +446,18 @@ export const resetpassword = async(req,res)=>{
                 message: "Email is not Found , Signup First"
             })
         }
-        const verify =await jsonwebtoken.verify(resettoken,ResetTokenkey);
-        if(!verify){
-            return res.status(401).json({
-                message:"token is invalid"
-            })
+        
+        let verify
+        try {
+            verify = jsonwebtoken.verify(resettoken, ResetTokenkey)
+        } catch {
+            return res.status(401).json({ message: "Reset token is invalid or expired" })
         }
         const hashpassword =await bcrypt.hash(password,10);
         userexist.password =hashpassword;
         userexist.resettoken= undefined;
         userexist.refreshToken= undefined;
-        userexist.save({validateBeforeSave:false});
+        await userexist.save({validateBeforeSave:false});
         return res.status(200).json({
             success:true,
             message:"Password has change ,please login"
@@ -447,6 +470,26 @@ export const resetpassword = async(req,res)=>{
 
 // logout 
 
-export const logout = async(req,res)=>{
-    res.clearCookie("refreshToken");
+export const logout = async (req, res) => {
+    try {
+        const accessToken = req.cookies?.accessToken
+        const refreshToken = req.cookies?.refreshToken
+        if (refreshToken) {
+            await User.findOneAndUpdate(
+                { refreshToken },
+                { refreshToken: null }
+            )
+        }
+        res.clearCookie("accessToken")
+        res.clearCookie("refreshToken")
+        return res.status(200).json({
+            success: true,
+            message: "Logged out successfully"
+        })
+    } catch (error) {
+        return res.status(500).json({
+            message: "Logout failed",
+            error: error.message
+        })
+    }
 }

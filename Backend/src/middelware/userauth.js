@@ -3,14 +3,14 @@ import jsonwebtoken from "jsonwebtoken";
 const Accesssecretkey=process.env.ACCESS_SECRET_KEY;
 export const auth = async(req,res,next)=>{
     try {
-        const {AccessToken} = req.body;
-    if(!AccessToken){
+        const accessToken = req.cookies?.accessToken
+    if(!accessToken){
         return res.status(402).json({
             sucess:false,
             message:"Access token not found"
         })
     }
-    const verify = await jsonwebtoken.verify(AccessToken,Accesssecretkey);
+    const verify = await jsonwebtoken.verify(accessToken,Accesssecretkey);
     if(!verify){
         return res.status(402).json({
             sucess:false,

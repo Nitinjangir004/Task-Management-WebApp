@@ -31,7 +31,19 @@ const userschema = new mongoose.Schema({
     },
     otpExpires: { 
         type: Date 
-    }
+    },
+    passwordresetotp: { 
+        type: String, 
+        default: null 
+    },
+    passwordresetotpExpire: {
+        type: Date,
+        default: null
+     },
+    resettoken: {
+        type: String,
+        default: null
+     },
 }, { timestamps: true })   // adds createdAt, updatedAt automatically
 const User = mongoose.model("User" , userschema);
 export default User;

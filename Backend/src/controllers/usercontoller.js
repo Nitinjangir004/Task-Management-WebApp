@@ -9,7 +9,7 @@ export const getme = async(req,res)=>{
             message:"user not found in db , please signup & login"
         })
     }
-    const currentUser = await User.findById({userid});
+    const currentUser = await User.findById(userid);
     if(!currentUser){
         return res.status(400).json({
             success:false,
@@ -17,7 +17,7 @@ export const getme = async(req,res)=>{
         })
     }
     return res.status(200).json({
-        suucess:true,
+        success:true,
         message:"This is Your Details",
         username:currentUser.username,
         email:currentUser.email,
