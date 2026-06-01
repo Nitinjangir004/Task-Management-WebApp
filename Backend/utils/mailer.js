@@ -3,7 +3,7 @@ import { config } from "dotenv";
 config();
 
 export const transporter = nodemailer.createTransport({
-    host: "smtp.gmail.com",
+    host: process.env.SMTP_HOST,
     port: 465,
     secure: true, // use STARTTLS (upgrade connection to TLS after connecting)
     auth: {

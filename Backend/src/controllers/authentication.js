@@ -3,43 +3,11 @@ import User from "../model/user.js";
 import jsonwebtoken from "jsonwebtoken";
 import nodemailer from "nodemailer"
 import { transporter } from "../../utils/mailer.js";
+import { generateOtpEmailTemplate ,generateWelcomeEmailTemplate } from "../../utils/mailtemplate.js";
 const Accesssecretkey=process.env.ACCESS_SECRET_KEY;
 const Refreshsecretkey=process.env.REFRESH_SECRET_KEY;
 const ResetTokenkey=process.env.RESET_SECRET_KEY;
-// otp template 
 
-// A reusable function to generate the HTML email
-export const generateOtpEmailTemplate = (otp,signup) => {
-  return `
-    <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eaeaec; border-radius: 10px; background-color: #ffffff;">
-      
-      <div style="text-align: center; padding-bottom: 20px; border-bottom: 2px solid #f0f0f5;">
-        <h2 style="color: #1a1a1a; margin: 0; font-size: 24px;">Flowship</h2>
-      </div>
-      
-      <div style="padding: 30px 0; color: #4a4a4a; line-height: 1.6; font-size: 16px;">
-        <p style="margin-top: 0;">Hello,</p>
-        ${signup ? `<p>Thank you for signing up! To complete your registration and secure your account, please use the following One-Time Password (OTP) to verify your email address.</p>
-        ` : `<p>We received a request to reset your password. Please use the following One-Time Password (OTP) to securely authorize this change.</p>`}
-        
-        <div style="text-align: center; margin: 35px 0;">
-          <span style="display: inline-block; font-size: 32px; font-weight: bold; letter-spacing: 8px; color: #4F46E5; background-color: #EEF2FF; padding: 15px 30px; border-radius: 8px; border: 1px solid #C7D2FE;">
-            ${otp}
-          </span>
-        </div>
-        
-        <p>This code is valid for <strong>10 minutes</strong>.</p>
-        <p style="font-size: 14px; color: #71717a;">If you did not request this email, there is nothing you need to do. Simply ignore this message.</p>
-      </div>
-      
-      <div style="text-align: center; padding-top: 20px; border-top: 1px solid #f0f0f5; color: #a1a1aa; font-size: 12px;">
-        <p style="margin: 0;">This is an automated message, please do not reply to this email.</p>
-        <p style="margin: 5px 0 0 0;">&copy; ${new Date().getFullYear()} Task Management App. All rights reserved.</p>
-      </div>
-      
-    </div>
-  `;
-};
 
 //Signup
 export  const signup = async(req,res)=>{
@@ -162,6 +130,14 @@ export const verifyotp = async(req,res)=>{
             sameSite: "strict",
             maxAge: 7 * 24 * 60 * 60 * 1000,
         })
+        await transporter.sendMail({
+            from: `"Flowship Team" <${process.env.SMTP_USER}>`,
+            to: newUser.email,
+            replyTo: process.env.REPLY_TO,
+            subject: "Welcome to Flowship 🚀",
+            html: generateWelcomeEmailTemplate(newUser.username)
+        })
+
         return res.status(201).json({
             success:200,
             message:"Sign-in completed"
@@ -319,6 +295,7 @@ export const resendotp = async(req,res)=>{
             const info = await transporter.sendMail({
                 from: `"Flowship Team" <${process.env.SMTP_USER}>`, // sender address
                 to: email, // The user's email
+                replyTo: process.env.REPLY_TO,
                 subject: "Verify Your Email Address - Flowship", // Clean, clear subject line
                 
                 // Fallback for ancient email clients or strict firewalls
