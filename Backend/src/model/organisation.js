@@ -15,6 +15,37 @@ const organisationSchema = new Schema({
         type:Objectid,
         required:true
     },
+    
+    requiresApproval: {
+        type: Boolean,
+        default: false 
+    },
+
+    joinRequests: [{
+        user: {
+            type: Objectid,
+            ref: 'User',
+            required: true
+        },
+        status: {
+            type: String,
+            enum: ['pending', 'approved', 'rejected'],
+            default: 'pending'
+        },
+        requestedAt: {
+            type: Date,
+            default: Date.now
+        },
+        reviewedAt: {
+            type: Date,
+            default: null
+        },
+        reviewedBy: {
+            type: Objectid,
+            ref: 'User',
+            default: null
+        }
+    }],
     members:[{
         user:{
             ref:'User',
