@@ -200,7 +200,15 @@ export const joinRequests =async (req,res)=>{
                 message: "Invalid invite link"
             })
         }
-        userMember = CurrentOrg.members.find()
+        userMember = CurrentOrg.members.find((m)=>{
+            m.user=user;
+        })
+        if(!userMember){
+            return res.status.json({
+                success:false,
+                message:"user not found in org"
+            })
+        }
 
     } catch (error) {
         
