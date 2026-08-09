@@ -11,6 +11,7 @@ router.post("/resendotp",resendotp);
 router.post("/forgetpassword",forgetPassword);
 router.post("/verifyresendotp",VerifyResetOtp);
 router.post("/resetpassword",resetpassword);
+router.post('/refresh',refresh);
 router.get("/me",auth,getme)
 router.get("/user", function(req,res){
     res.json({

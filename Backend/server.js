@@ -5,6 +5,7 @@ import router from "./src/router/userroute.js";
 import mongodb from "./db.js";
 import { transporter } from "./utils/mailer.js";
 import cookieParser from "cookie-parser";
+import OrgRouter from './src/router/organisationroute.js';
 const app = express();
 app.use(cors());
 app.use(express.json());
@@ -13,6 +14,7 @@ const port = process.env.PORT || 5000;
 
 //routes
 app.use("/v1/account" , router);
+app.use("/v1/account/org",OrgRouter);
 
 const startServer = async () => {
     try {

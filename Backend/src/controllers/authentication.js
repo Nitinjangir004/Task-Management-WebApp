@@ -55,7 +55,7 @@ export  const signup = async(req,res)=>{
             // send otp via node mailer 
             try {
                 const info = await transporter.sendMail({
-                    from: `"Flowship Team" <${process.env.SMTP_USER}>`, // sender address
+                    from: `"Flowship Team" <${process.env.MAIL_FROM}>`, // sender address
                     to: email, // The user's email
                     subject: "Verify Your Email Address - Flowship", // Clean, clear subject line
                     
@@ -131,7 +131,7 @@ export const verifyotp = async(req,res)=>{
             maxAge: 7 * 24 * 60 * 60 * 1000,
         })
         await transporter.sendMail({
-            from: `"Flowship Team" <${process.env.SMTP_USER}>`,
+            from: `"Flowship Team" <${process.env.MAIL_FROM}>`,
             to: newUser.email,
             replyTo: process.env.REPLY_TO,
             subject: "Welcome to Flowship 🚀",
@@ -293,7 +293,7 @@ export const resendotp = async(req,res)=>{
         const otpExpiryTime = new Date(Date.now() + 10 * 60 * 1000);
         try {
             const info = await transporter.sendMail({
-                from: `"Flowship Team" <${process.env.SMTP_USER}>`, // sender address
+                from: `"Flowship Team" <${process.env.MAIL_FROM}>`, // sender address
                 to: email, // The user's email
                 replyTo: process.env.REPLY_TO,
                 subject: "Verify Your Email Address - Flowship", // Clean, clear subject line
@@ -347,7 +347,7 @@ export const forgetPassword = async(req,res)=>{
         const otpExpiryTime = new Date(Date.now() + 10 * 60 * 1000);
         try {
             const info = await transporter.sendMail({
-                from: `"Flowship Team" <${process.env.SMTP_USER}>`,
+                from: `"Flowship Team" <${process.env.MAIL_FROM}>`,
                 to: email,
                 subject: "Reset Password OTP - Flowship",
                 text: `Hello, your reset password verification code is: ${generatedOtp}. This code expires in 10 minutes.`, 
